@@ -125,59 +125,64 @@ export class MarketEngine extends EventEmitter {
     // Only connect during actual server runtime, not during Next.js build/static analysis
     if (process.env.NEXT_PHASE === "phase-production-build") return;
 
-    let WS;
-    try {
-      WS = globalThis.WebSocket ?? require("ws").WebSocket;
-    } catch {
-      return;
-    }
-
-    const symbols = Object.values(BINANCE_MAP);
-    const streams = symbols.map((s) => `${s}@miniTicker`).join("/");
-    const url = `wss://stream.binance.com:9443/stream?streams=${streams}`;
-    let attempt = 0;
-    let blocked = false;
-
-    const connect = () => {
-      let ws;
-      try { ws = new WS(url); } catch { return; }
-      this._binanceWs = ws;
-
-      ws.onopen = () => {
-        attempt = 0;
-        blocked = false;
-        console.log("[marketEngine] Binance stream connected");
-      };
-      ws.onmessage = (ev) => {
+    void (async () => {
+      let WS = globalThis.WebSocket;
+      if (!WS) {
         try {
-          const msg = JSON.parse(typeof ev.data === "string" ? ev.data : ev.data.toString());
-          this._applyTicker(msg.data ?? msg);
-        } catch {}
-      };
-      ws.onclose = () => {
-        attempt++;
-        const next = Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_MAX_MS);
-        if (!blocked) {
-          console.log(`[marketEngine] Binance unavailable, retrying in ${Math.round(next / 1000)}s (simulated data active)`);
+          const mod = await import("ws");
+          WS = mod.WebSocket;
+        } catch {
+          return;
         }
-        setTimeout(connect, next);
-      };
-      ws.onerror = (err) => {
-        const msg = err.message ?? String(err);
-        // 451 = geo-block, connection refused = network block — suppress after first notice
-        const isBlock = msg.includes("451") || msg.includes("ECONNREFUSED") || msg.includes("before it was established");
-        if (!blocked) {
-          if (isBlock) {
-            console.log("[marketEngine] Binance geo-blocked — running on simulated data");
-            blocked = true;
-          } else {
-            console.log("[marketEngine] Binance error:", msg);
+      }
+
+      const symbols = Object.values(BINANCE_MAP);
+      const streams = symbols.map((s) => `${s}@miniTicker`).join("/");
+      const url = `wss://stream.binance.com:9443/stream?streams=${streams}`;
+      let attempt = 0;
+      let blocked = false;
+
+      const connect = () => {
+        let ws;
+        try { ws = new WS(url); } catch { return; }
+        this._binanceWs = ws;
+
+        ws.onopen = () => {
+          attempt = 0;
+          blocked = false;
+          console.log("[marketEngine] Binance stream connected");
+        };
+        ws.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(typeof ev.data === "string" ? ev.data : ev.data.toString());
+            this._applyTicker(msg.data ?? msg);
+          } catch {}
+        };
+        ws.onclose = () => {
+          attempt++;
+          const next = Math.min(RECONNECT_BASE_MS * 2 ** attempt, RECONNECT_MAX_MS);
+          if (!blocked) {
+            console.log(`[marketEngine] Binance unavailable, retrying in ${Math.round(next / 1000)}s (simulated data active)`);
           }
-        }
-        try { ws.close(); } catch {}
+          setTimeout(connect, next);
+        };
+        ws.onerror = (err) => {
+          const msg = err.message ?? String(err);
+          // 451 = geo-block, connection refused = network block — suppress after first notice
+          const isBlock = msg.includes("451") || msg.includes("ECONNREFUSED") || msg.includes("before it was established");
+          if (!blocked) {
+            if (isBlock) {
+              console.log("[marketEngine] Binance geo-blocked — running on simulated data");
+              blocked = true;
+            } else {
+              console.log("[marketEngine] Binance error:", msg);
+            }
+          }
+          try { ws.close(); } catch {}
+        };
       };
-    };
-    connect();
+      connect();
+    })();
   }
 
   _applyTicker(ticker) {

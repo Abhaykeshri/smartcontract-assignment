@@ -1,0 +1,8 @@
+
+> zync-erc20@1.0.0 dev
+> npm run dev -w zync-client
+
+
+> zync-client@1.0.0 dev
+> node run.mjs dev
+

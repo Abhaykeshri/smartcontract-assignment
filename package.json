@@ -12,10 +12,11 @@
   ],
   "scripts": {
     "prestart": "node --input-type=module -e \"import fs from 'node:fs'; fs.rmSync('client/.next',{recursive:true,force:true})\"",
-    "chain": "npx hardhat node --config contracts/hardhat.config.cjs",
-    "deploy": "npx hardhat run contracts/scripts/deploy.cjs --network localhost --config contracts/hardhat.config.cjs",
-    "compile": "npx hardhat compile --config contracts/hardhat.config.cjs",
-    "test:contracts": "npx hardhat compile --config contracts/hardhat.config.cjs && npx hardhat test --config contracts/hardhat.config.cjs && npm run dev",
+    "chain": "node node_modules/hardhat/internal/cli/bootstrap.js node --config contracts/hardhat.config.cjs",
+    "deploy": "node node_modules/hardhat/internal/cli/bootstrap.js run contracts/scripts/deploy.cjs --network localhost --config contracts/hardhat.config.cjs",
+    "deploy:vesting": "node node_modules/hardhat/internal/cli/bootstrap.js run contracts/scripts/deploy-vesting.cjs --network localhost --config contracts/hardhat.config.cjs",
+    "compile": "node node_modules/hardhat/internal/cli/bootstrap.js compile --config contracts/hardhat.config.cjs",
+    "test:contracts": "node node_modules/hardhat/internal/cli/bootstrap.js compile --config contracts/hardhat.config.cjs && node node_modules/hardhat/internal/cli/bootstrap.js test --config contracts/hardhat.config.cjs",
     "dev": "npm run dev -w zync-client",
     "start": "npm run start -w zync-client",
     "client:build": "npm run build -w zync-client"

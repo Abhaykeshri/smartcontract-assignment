@@ -1,0 +1,23 @@
+node:events:502
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: EPERM: operation not permitted, open 'C:\github\smartcontract-assignment\client\.next\trace'
+Emitted 'error' event on WriteStream instance at:
+    at emitErrorNT (node:internal/streams/destroy:169:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:128:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\github\\smartcontract-assignment\\client\\.next\\trace'
+}
+
+Node.js v20.20.2
+npm error Lifecycle script `dev` failed with error:
+npm error code 1
+npm error path C:\github\smartcontract-assignment\client
+npm error workspace zync-client@1.0.0
+npm error location C:\github\smartcontract-assignment\client
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c node run.mjs dev

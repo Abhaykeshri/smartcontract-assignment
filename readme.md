@@ -1,173 +1,195 @@
-# ZyncSwap — Smart Contract Developer Assessment
+# ZyncSwap Smart Contracts
 
-Welcome to the ZyncSwap **Smart Contract Developer** assessment.
+This repository contains the ZYNC token smart contracts, Hardhat tests, and deploy scripts for the assessment.
 
-ZyncSwap is a decentralised exchange platform built around the **ZYNC** utility token. This repository includes a reference Next.js frontend and API for context, but **your assessment is limited to the `contracts/` workspace** — Solidity, Hardhat tests, and deployment scripts.
+The contract work lives under `contracts/`. The frontend is included for local testing, but the main deliverable is the Solidity and Hardhat work.
 
-You are **not** expected to modify frontend or backend code.
+## What Is Included
 
-Focus on correctness, security, and test coverage. Submit what you have when time is up.
+- `ZyncToken.sol`
+- `ZyncVesting.sol`
+- Hardhat tests for token and vesting behavior
+- Deploy scripts for token and vesting
 
----
+## Requirements
 
-## Time Consideration
+- Node.js 18 or newer
+- npm
 
-This assessment is scoped for **4–6 hours**. If you hit your limit, submit what you have and use your README to describe what you would finish next.
+## Install
 
----
+From the repo root:
 
-## Getting Started
-
-You need **Node.js 18+** and **npm**.
-
-### Contract work (required for the assessment)
-
-```bash
-# 1. Fork this repo and clone your fork
-git clone https://github.com/YOUR_USERNAME/smart-contract-assessment.git
-cd smart-contract-assessment
+```powershell
 npm install
+```
 
-# 2. Compile contracts
+## Run The Contract Checks
+
+Compile the Solidity contracts:
+
+```powershell
 npm run compile
+```
 
-# 3. Run existing tests
+Run the full contract test suite:
+
+```powershell
 npm run test:contracts
 ```
 
-### Running the full project (optional)
+Expected result:
 
-The DEX frontend and API are included so you can explore the product and verify your deployed contract on a local chain. **You do not need to change any frontend or backend code** to complete the assessment.
+- Solidity compiles successfully
+- All tests pass
 
-```bash
-# 1. Set up environment variables
-cp .env.example .env
+## Local Chain And Deploy
 
-# 2. Start a local Hardhat blockchain (keep this terminal open)
+Start a local Hardhat chain in one terminal:
+
+```powershell
 npm run chain
+```
 
-# 3. Deploy the ZyncToken contract (new terminal)
+Deploy the ZYNC token in another terminal:
+
+```powershell
 npm run deploy
-# Copy the printed address into .env as ZYNC_TOKEN_ADDRESS
+```
 
-# 4. Start the app
+The deploy script prints the token address. On Hardhat localhost this is usually:
+
+```text
+0x5fbdb2315678afecb367f032d93f642f64180aa3
+```
+
+## Deploy Vesting
+
+Set the token address for the current PowerShell session:
+
+```powershell
+$env:ZYNC_TOKEN_ADDRESS="0x5fbdb2315678afecb367f032d93f642f64180aa3"
+```
+
+Optional: fund the vesting contract during deploy:
+
+```powershell
+$env:INITIAL_FUNDING_WEI="100000000000000000000"
+```
+
+Then deploy vesting:
+
+```powershell
+npm run deploy:vesting
+```
+
+## Run The Frontend
+
+If you want to start the local UI:
+
+```powershell
 npm run dev
-# → http://localhost:3000
 ```
 
----
+If the app expects a token address, set `ZYNC_TOKEN_ADDRESS` first in `.env` or in the terminal session.
 
-## Project Structure
+## Environment Variables
 
-Your work lives under `contracts/`:
+Typical local `.env` values:
 
-```
-contracts/
-├── contracts/
-│   └── ZyncToken.sol     # ERC-20 ZYNC token (mint, cap, ETH sale)
-├── scripts/
-│   └── deploy.cjs        # Hardhat deploy script
-├── test/
-│   └── ZyncToken.test.cjs
-└── hardhat.config.cjs
+```env
+CHAIN_ID=31337
+RPC_URL=http://127.0.0.1:8545
+ZYNC_TOKEN_ADDRESS=0x5fbdb2315678afecb367f032d93f642f64180aa3
+PORT=3000
 ```
 
-`ZyncToken.sol` is an ERC-20 with:
+Optional vesting deploy variable:
 
-- A fixed `MAX_SUPPLY` cap
-- Owner-controlled `mintTo` (treasury / airdrops)
-- Public `mintWithEth` (payable mint at `mintPriceWei`)
-- Owner `setMintPrice` and `withdraw` of sale proceeds
-- `ReentrancyGuard` on payable functions
+```env
+INITIAL_FUNDING_WEI=100000000000000000000
+```
 
----
+## What The Tests Cover
 
-## Tasks
+### ZyncToken
 
-### Task 1 — Bug Fix & Hardening
+- Public ETH minting
+- Excess ETH refund behavior
+- Zero mint price validation
+- Mint price update events
+- Treasury mint events
+- ETH withdrawal events
+- `burn`
+- `burnFrom`
+- Balance and allowance failure cases
+- `MAX_SUPPLY` behavior after burns
 
-Review `ZyncToken.sol` and fix issues in the minting logic:
+### ZyncVesting
 
-- `setMintPrice(0)` currently bricks `mintWithEth` permanently (every call reverts with `ZeroAmount`)
-- Add validation so the owner cannot set a zero price, **or** handle the zero-price case explicitly with a clear revert message
-- Ensure `mintWithEth` still refunds excess ETH correctly when `msg.value` is not an exact multiple of the mint price
-- Add or extend tests in `contracts/test/` for the edge cases above
+- Funding the vesting contract
+- Creating schedules
+- Linear release after the cliff
+- Preventing double claims
+- Rejecting schedules without enough funding
 
----
+## Generated Caches And Build Output
 
-### Task 2 — Token Burn
+These folders are safe to delete if the project gets into a bad state:
 
-Extend `ZyncToken.sol`:
+- `client/.next`
+- `contracts/artifacts`
+- `contracts/cache`
+- `node_modules`
 
-- Add `burn(uint256 amount)` so any holder can destroy their own tokens
-- Add `burnFrom(address account, uint256 amount)` using the ERC-20 allowance mechanism
-- Emit `Burned(address indexed from, uint256 amount)` on every burn
-- Enforce `MAX_SUPPLY` semantics correctly (burned tokens should not count toward remaining mintable supply)
-- Write tests covering: successful burn, burn exceeding balance, `burnFrom` with sufficient allowance, and `burnFrom` without allowance
+If the frontend gets stuck on a stale build, stop the dev server and remove `client/.next`, then start again:
 
----
+```powershell
+Remove-Item -Recurse -Force .\client\.next
+npm run dev
+```
 
-### Task 3 — Events & Observability
-
-Improve on-chain observability without changing core business logic:
-
-- Emit indexed events for: mint price updates, treasury mints (`mintTo`), and ETH withdrawals
-- Follow existing naming conventions and include relevant parameters (`previousPrice`, `newPrice`, `to`, `amount`, etc.)
-- Add tests that assert events are emitted with the correct arguments (use Hardhat/Chai event matchers)
-
----
-
-### Task 4 — New Contract: ZyncVesting
-
-Add a new contract `ZyncVesting.sol` in `contracts/contracts/`:
-
-- Accept ZYNC deposits from an owner/admin at construction or via a `fund()` function
-- Allow the admin to create vesting schedules: `(beneficiary, amount, start, cliff, duration)`
-- Beneficiaries call `release()` to claim vested tokens linearly after the cliff
-- Prevent double-claiming and reentrancy on `release()`
-- Write a deploy script update (or a separate `deploy-vesting.cjs`) and full test coverage in `contracts/test/ZyncVesting.test.cjs`
-
----
-
-## Scripts
+## Project Scripts
 
 | Command | Description |
-|---------|-------------|
-| `npm run compile` | Compile Solidity contracts |
-| `npm run test:contracts` | Run Hardhat contract tests |
-| `npm run chain` | Start local Hardhat node |
-| `npm run deploy` | Deploy ZyncToken to localhost |
-| `npm run dev` | Start Next.js dev server on port 3000 |
-| `npm run client:build` | Production build |
-| `npm run start` | Start production server |
+|---|---|
+| `npm run compile` | Compile the Solidity contracts |
+| `npm run test:contracts` | Compile and run all Hardhat tests |
+| `npm run chain` | Start a local Hardhat JSON-RPC node |
+| `npm run deploy` | Deploy `ZyncToken` to the local chain |
+| `npm run deploy:vesting` | Deploy `ZyncVesting` to the local chain |
+| `npm run dev` | Start the frontend |
 
----
+## Notes
 
-## Evaluation Criteria
+- The Hardhat localhost address for the first deployment is deterministic, which is why the token address is often `0x5fbdb2315678afecb367f032d93f642f64180aa3`.
+- `burn` reduces total supply, so burned tokens can be minted again later without breaking the max supply cap.
+- `mintPriceWei` must stay above zero.
 
-| Area | Weight |
-|------|--------|
-| Task 1 — Bug Fix & Hardening | 25% |
-| Task 2 — Token Burn | 25% |
-| Task 3 — Events & Observability | 20% |
-| Task 4 — ZyncVesting | 30% |
+## How The Tasks Were Completed
 
-You are also evaluated on:
+### Task 1 - Mint Fix
 
-- Solidity correctness and gas awareness
-- Security practices (reentrancy, access control, input validation)
-- Test coverage and edge-case handling
-- Code clarity and consistency with the existing style
-- Clear commit history and README notes
+- Added a zero-price guard so `setMintPrice(0)` cannot brick minting.
+- Kept the ETH mint refund path intact using exact token-cost math.
+- Added tests for zero-price rejection and refund behavior.
 
----
+### Task 2 - Token Burn
 
-## Submission
+- Added `burn(uint256 amount)` for token holders.
+- Added `burnFrom(address account, uint256 amount)` with allowance checks.
+- Emitted a `Burned` event on every burn.
+- Verified that burned supply can be minted again without breaking `MAX_SUPPLY`.
 
-- Do **not** open a PR to this repo — share your **fork URL**
-- In your fork, update this `README.md` to explain:
-  - How to compile and run your tests
-  - Any security assumptions or known limitations
-  - What you would improve or finish given more time
-- Verify `npm install` → `npm run compile` → `npm run test:contracts` passes on a clean checkout
-- If you ran the full app, confirm `npm run chain` → `npm run deploy` → `npm run dev` works end-to-end
+### Task 3 - Events And Observability
+
+- Added indexed events for mint price updates, treasury minting, and ETH withdrawals.
+- Extended tests to assert emitted event names and arguments.
+
+### Task 4 - Vesting Contract
+
+- Added `ZyncVesting.sol` to accept funding, create vesting schedules, and release vested tokens over time.
+- Protected release with `nonReentrant`.
+- Added tests for funding, schedule creation, linear release, and failure cases.
+- Added a separate deploy script for vesting.
+
